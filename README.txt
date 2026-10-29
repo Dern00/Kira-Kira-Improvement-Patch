@@ -40,8 +40,7 @@ KiraKira_Improvement_Backup folder until you no longer need to uninstall.
 NOTES
 
 Wrapping, long passages, enlarged text, the backlog, and choice selection have
-been checked. This is not a complete playthrough of every route and ending.
-The game itself is not included. All original game rights remain with their
+been checked. The game itself is not included. All original game rights remain with their
 owners. Font details and licensing are in FONT_LICENSE.txt.
 
 Downloads and issue reports:
