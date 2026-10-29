@@ -10,7 +10,6 @@ WHAT CHANGES
   English, checked against the original Japanese script.
 - Keeps natural dialogue, character voices, jokes, and established localizations.
 - Replaces the hard-to-read game font with a clearer bold font.
-- Preserves the story, choices, and route logic.
 
 INSTALL
 
