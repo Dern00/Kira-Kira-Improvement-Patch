@@ -1,6 +1,6 @@
 {
   "owner": "KiraKiraImprovementPatch1",
-  "version": "1.1",
+  "version": "1.2",
   "engineSha256": "d84926c5a532a8d261f9d163f06316eeb8331a155caa282950b1f7b375bea1e0",
   "files": [
     {
@@ -17,6 +17,14 @@
       "previousSha256": "2705e7e8d35c35e6ebce83779defd64bbcc07c3d3427d6e3aa3254867648ba83",
       "previousPayload": "payload/ipl._bp.v10.kkd",
       "previousPayloadSha256": "b59ccefa92e902fb229a549b95c397670c849fc042353ab042308dec8b8e6caa",
+      "archiveBase": {
+        "name": "system.arc",
+        "sha256": "1bf320de65c9327f5aae03605675e1e1e1e6c490b367424d27cb2f16f709cd97",
+        "entry": "ipl._bp",
+        "entrySha256": "dc2905fd77d74084f8505d6c6cee9c23ce3f51945d2100ee5c1192b864c24915",
+        "payload": "payload/ipl._bp.archive.kkd",
+        "payloadSha256": "9974dd169b8b63fe8c913af1b449ea14eb2a5712f37ec215fb968c87683db70c"
+      },
       "payload": "payload/ipl._bp.kkd",
       "payloadSha256": "58a9015ad1c032f599ee9db683b8ac25cb9f60eb218915750d8adbb4f338d1d2"
     },

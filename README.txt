@@ -1,5 +1,5 @@
 KIRA KIRA IMPROVEMENT PATCH
-Version 1.1
+Version 1.2
 
 An improvement patch for the English Standard Edition of Kira Kira.
 Requires the English game. Not for Curtain Call or the Japanese edition.
@@ -19,8 +19,10 @@ INSTALL
 3. Select the game folder containing BGI.exe.
 4. Launch BGI.exe normally. The game now loads the improved font itself.
 
-Already using version 1.0? Run this version's Install.cmd on the same folder
+Already using version 1.0 or 1.1? Run this version's Install.cmd on the same folder
 to upgrade. Your saves and original uninstall backups are preserved.
+
+You can install the patch before launching the game for the first time.
 
 SAVES
 

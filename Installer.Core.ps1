@@ -44,6 +44,8 @@ function Assert-Closed($Root) {
     }
     foreach($name in @('data01000.arc','ipl._bp')) {
         $path=Join-Path $Root $name
+        # A clean game stores its bootstrap inside system.arc, with no loose file.
+        if($name -eq 'ipl._bp' -and -not (Test-Path -LiteralPath $path)) { continue }
         $stream=[IO.File]::Open($path,'Open','ReadWrite','None');$stream.Dispose()
     }
 }
@@ -94,7 +96,7 @@ public static class KiraPatchDelta {
 }
 function Read-Package($Package) {
     $manifest=Get-Content -LiteralPath (Join-Path $Package 'manifest.json') -Raw -Encoding UTF8 | ConvertFrom-Json
-    if($manifest.owner -ne $script:Owner -or $manifest.version -ne '1.1') { throw 'Unsupported patch package.' }
+    if($manifest.owner -ne $script:Owner -or $manifest.version -ne '1.2') { throw 'Unsupported patch package.' }
     $names=@($manifest.files | ForEach-Object { $_.name })
     if($names.Count -ne $script:Names.Count -or @(Compare-Object $names $script:Names).Count -ne 0 -or @($names | Select-Object -Unique).Count -ne $names.Count) { throw 'Invalid patch file list.' }
     for($i=0;$i -lt $names.Count;$i++) { if($names[$i] -cne $script:Names[$i]) { throw 'Invalid patch file order.' } }
@@ -107,6 +109,12 @@ function Read-Package($Package) {
             if($f.name -cne 'ipl._bp' -or $f.previousPayload -cne 'payload/ipl._bp.v10.kkd' -or $f.previousSha256 -notmatch '^[a-f0-9]{64}$' -or $f.previousPayloadSha256 -notmatch '^[a-f0-9]{64}$') { throw 'Invalid upgrade manifest.' }
             $upgrade=Join-Path $Package $f.previousPayload;Assert-PlainPath $upgrade
             if((Get-Sha $upgrade) -ne $f.previousPayloadSha256) { throw 'Upgrade patch files are damaged. Extract the ZIP again.' }
+        }
+        if($f.PSObject.Properties['archiveBase']) {
+            $a=$f.archiveBase
+            if($f.name -cne 'ipl._bp' -or $a.name -cne 'system.arc' -or $a.entry -cne 'ipl._bp' -or $a.payload -cne 'payload/ipl._bp.archive.kkd' -or $a.sha256 -notmatch '^[a-f0-9]{64}$' -or $a.entrySha256 -notmatch '^[a-f0-9]{64}$' -or $a.payloadSha256 -notmatch '^[a-f0-9]{64}$') { throw 'Invalid fresh-install manifest.' }
+            $fresh=Join-Path $Package $a.payload;Assert-PlainPath $fresh
+            if((Get-Sha $fresh) -ne $a.payloadSha256) { throw 'Fresh-install patch files are damaged. Extract the ZIP again.' }
         }
     }
     return $manifest
@@ -149,9 +157,37 @@ function Restore-Receipt($Root,$Receipt) {
     }
     $Receipt.state='restored';Write-JsonAtomic $receiptPath $Receipt
 }
+function Read-ArchiveBootstrap($Root,$Archive) {
+    $path=Join-Path $Root 'system.arc';Assert-PlainPath $path
+    if(-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw 'system.arc is missing. Select a complete English Standard Edition game folder.' }
+    if((Get-Sha $path) -ne $Archive.sha256) { throw 'Unsupported or modified system.arc. Use the English Standard Edition.' }
+    $data=[IO.File]::ReadAllBytes($path)
+    if($data.Length -lt 16 -or [Text.Encoding]::ASCII.GetString($data,0,12) -cne 'PackFile    ') { throw 'Invalid system archive.' }
+    $count=[BitConverter]::ToUInt32($data,12);$start=[long]16+[long]32*$count
+    if($start -gt $data.Length) { throw 'Truncated system archive index.' }
+    $found=$null
+    for($i=0;$i -lt $count;$i++) {
+        $pos=16+32*$i;$name=[Text.Encoding]::ASCII.GetString($data,$pos,16).Split([char]0)[0]
+        if($name -cne 'ipl._bp') { continue }
+        if($null -ne $found) { throw 'Duplicate bootstrap in system archive.' }
+        $offset=[long][BitConverter]::ToUInt32($data,$pos+16)+$start;$size=[long][BitConverter]::ToUInt32($data,$pos+20)
+        if($size -lt 1 -or $size -gt 33554432 -or $offset+$size -gt $data.Length) { throw 'Invalid bootstrap archive entry.' }
+        $found=New-Object byte[] ([int]$size);[Array]::Copy($data,$offset,$found,0,$size)
+    }
+    if($null -eq $found) { throw 'The game bootstrap was not found inside system.arc.' }
+    $sha=[Security.Cryptography.SHA256]::Create()
+    try { $hash=([BitConverter]::ToString($sha.ComputeHash($found))).Replace('-','').ToLowerInvariant() } finally { $sha.Dispose() }
+    if($hash -ne $Archive.entrySha256) { throw 'The original game bootstrap failed verification.' }
+    return ,$found
+}
 function Get-PatchedBytes($Root,$Package,$File) {
     $target=Join-Path $Root $File.name;$exists=Test-Path -LiteralPath $target -PathType Leaf
     $before=if($exists) { Get-Sha $target } else { $null }
+    if($File.name -eq 'ipl._bp' -and -not $exists -and $File.PSObject.Properties['archiveBase']) {
+        $original=Read-ArchiveBootstrap $Root $File.archiveBase
+        Initialize-Delta
+        return ,([KiraPatchDelta]::Apply($original,[IO.File]::ReadAllBytes((Join-Path $Package $File.archiveBase.payload))))
+    }
     if($File.name -in @('data01000.arc','ipl._bp')) {
         if($before -eq $File.sha256) { return ,([IO.File]::ReadAllBytes($target)) }
         $delta=$null
