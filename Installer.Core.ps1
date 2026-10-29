@@ -94,7 +94,7 @@ public static class KiraPatchDelta {
 }
 function Read-Package($Package) {
     $manifest=Get-Content -LiteralPath (Join-Path $Package 'manifest.json') -Raw -Encoding UTF8 | ConvertFrom-Json
-    if($manifest.owner -ne $script:Owner -or $manifest.version -ne '1.0') { throw 'Unsupported patch package.' }
+    if($manifest.owner -ne $script:Owner -or $manifest.version -ne '1.1') { throw 'Unsupported patch package.' }
     $names=@($manifest.files | ForEach-Object { $_.name })
     if($names.Count -ne $script:Names.Count -or @(Compare-Object $names $script:Names).Count -ne 0 -or @($names | Select-Object -Unique).Count -ne $names.Count) { throw 'Invalid patch file list.' }
     for($i=0;$i -lt $names.Count;$i++) { if($names[$i] -cne $script:Names[$i]) { throw 'Invalid patch file order.' } }
@@ -103,6 +103,11 @@ function Read-Package($Package) {
         if($f.payload -cne $expected -or $f.sha256 -notmatch '^[a-f0-9]{64}$' -or $f.payloadSha256 -notmatch '^[a-f0-9]{64}$') { throw 'Invalid patch manifest.' }
         $path=Join-Path $Package $f.payload;Assert-PlainPath $path
         if((Get-Sha $path) -ne $f.payloadSha256) { throw ('Patch files are damaged. Extract the ZIP again: '+$f.name) }
+        if($f.PSObject.Properties['previousPayload']) {
+            if($f.name -cne 'ipl._bp' -or $f.previousPayload -cne 'payload/ipl._bp.v10.kkd' -or $f.previousSha256 -notmatch '^[a-f0-9]{64}$' -or $f.previousPayloadSha256 -notmatch '^[a-f0-9]{64}$') { throw 'Invalid upgrade manifest.' }
+            $upgrade=Join-Path $Package $f.previousPayload;Assert-PlainPath $upgrade
+            if((Get-Sha $upgrade) -ne $f.previousPayloadSha256) { throw 'Upgrade patch files are damaged. Extract the ZIP again.' }
+        }
     }
     return $manifest
 }
@@ -144,6 +149,62 @@ function Restore-Receipt($Root,$Receipt) {
     }
     $Receipt.state='restored';Write-JsonAtomic $receiptPath $Receipt
 }
+function Get-PatchedBytes($Root,$Package,$File) {
+    $target=Join-Path $Root $File.name;$exists=Test-Path -LiteralPath $target -PathType Leaf
+    $before=if($exists) { Get-Sha $target } else { $null }
+    if($File.name -in @('data01000.arc','ipl._bp')) {
+        if($before -eq $File.sha256) { return ,([IO.File]::ReadAllBytes($target)) }
+        $delta=$null
+        if($before -eq $File.baseSha256) { $delta=$File.payload }
+        elseif($File.PSObject.Properties['previousSha256'] -and $before -eq $File.previousSha256) { $delta=$File.previousPayload }
+        if(-not $delta) { throw ('Unsupported or modified game file: '+$File.name+'. Use the English Standard Edition.') }
+        Initialize-Delta
+        return ,([KiraPatchDelta]::Apply([IO.File]::ReadAllBytes($target),[IO.File]::ReadAllBytes((Join-Path $Package $delta))))
+    }
+    if($exists -and $before -ne $File.sha256) { throw ('A different file already uses this patch filename: '+$File.name) }
+    return ,([IO.File]::ReadAllBytes((Join-Path $Package $File.payload)))
+}
+function Restore-Upgrade($Root,$Receipt) {
+    $u=$Receipt.upgrade
+    if($u.id -notmatch '^[a-f0-9]{32}$' -or $u.hashes.Count -ne $script:Names.Count) { throw 'Invalid upgrade recovery record.' }
+    $backup=Join-Path $Root 'KiraKira_Improvement_Backup';$run=Join-Path $backup $u.id
+    for($i=0;$i -lt $script:Names.Count;$i++) {
+        $copy=Join-Path $run ($i.ToString()+'.previous');Assert-PlainPath $copy
+        if($u.hashes[$i] -notmatch '^[a-f0-9]{64}$' -or (Get-Sha $copy) -ne $Receipt.files[$i].after) { throw 'Upgrade recovery backup verification failed.' }
+        $current=Get-Sha (Join-Path $Root $script:Names[$i])
+        if($current -ne $Receipt.files[$i].after -and $current -ne $u.hashes[$i]) { throw ('A file changed during upgrade; recovery stopped: '+$script:Names[$i]) }
+    }
+    for($i=0;$i -lt $script:Names.Count;$i++) { Set-FileAtomic (Join-Path $run ($i.ToString()+'.previous')) (Join-Path $Root $script:Names[$i]) }
+    $Receipt.PSObject.Properties.Remove('upgrade');$Receipt.state='committed'
+    Write-JsonAtomic (Join-Path $backup 'receipt.json') $Receipt
+}
+function Invoke-PatchUpgrade($Root,$Package,$Manifest,$Receipt) {
+    $outputs=@()
+    foreach($f in $Manifest.files) { $outputs+=,(Get-PatchedBytes $Root $Package $f) }
+    $backup=Join-Path $Root 'KiraKira_Improvement_Backup';$id=[Guid]::NewGuid().ToString('N');$run=Join-Path $backup $id
+    [void][IO.Directory]::CreateDirectory($run)
+    for($i=0;$i -lt $script:Names.Count;$i++) {
+        $copy=Join-Path $run ($i.ToString()+'.previous')
+        [IO.File]::Copy((Join-Path $Root $script:Names[$i]),$copy,$false)
+        if((Get-Sha $copy) -ne $Receipt.files[$i].after) { throw 'Upgrade backup failed. Game unchanged.' }
+        $next=Join-Path $run ($i.ToString()+'.next');[IO.File]::WriteAllBytes($next,$outputs[$i])
+        if((Get-Sha $next) -ne $Manifest.files[$i].sha256) { throw 'Upgrade output verification failed. Game unchanged.' }
+    }
+    $Receipt | Add-Member -NotePropertyName upgrade -NotePropertyValue @{id=$id;hashes=@($Manifest.files | ForEach-Object {$_.sha256})}
+    $Receipt.state='upgrading';$receiptPath=Join-Path $backup 'receipt.json';Write-JsonAtomic $receiptPath $Receipt
+    try {
+        for($i=0;$i -lt $script:Names.Count;$i++) {
+            Set-FileAtomic (Join-Path $run ($i.ToString()+'.next')) (Join-Path $Root $script:Names[$i])
+            Invoke-TestHook ('UpgradeAfterReplace'+$i)
+        }
+        foreach($f in $Manifest.files) { if((Get-Sha (Join-Path $Root $f.name)) -ne $f.sha256) { throw 'Upgrade verification failed.' } }
+        $done=$Receipt | ConvertTo-Json -Depth 12 | ConvertFrom-Json
+        for($i=0;$i -lt $script:Names.Count;$i++) { $done.files[$i].after=$Manifest.files[$i].sha256 }
+        $done.version=$Manifest.version;$done.state='committed';$done.PSObject.Properties.Remove('upgrade')
+        Write-JsonAtomic $receiptPath $done
+    } catch { $problem=$_;Restore-Upgrade $Root $Receipt;throw ('Upgrade failed and the previous patch was restored. '+$problem.Exception.Message) }
+    Write-Output 'Updated successfully. Launch BGI.exe normally. Saves and original uninstall backups were preserved.'
+}
 function Invoke-PatchInstallCore($GamePath,$PackageRoot) {
     $root=Get-GameRoot $GamePath;Assert-Closed $root
     $package=[IO.Path]::GetFullPath($PackageRoot).TrimEnd('\')
@@ -151,12 +212,16 @@ function Invoke-PatchInstallCore($GamePath,$PackageRoot) {
     $m=Read-Package $package
     if((Get-Sha (Join-Path $root 'BGI.exe')) -ne $m.engineSha256) { throw 'This game executable is not the supported English Standard Edition.' }
     $old=Read-Receipt $root
+    if($null -ne $old -and $old.state -eq 'upgrading') { Restore-Upgrade $root $old;throw 'An interrupted upgrade was rolled back safely. Run Install.cmd again.' }
     if($null -ne $old -and $old.state -notin @('committed','restored')) {
         Restore-Receipt $root $old
         throw 'An interrupted installation was rolled back safely. Run Install.cmd again to install.'
     }
     if($null -ne $old -and $old.state -eq 'committed') {
         foreach($f in $old.files) { if((Get-Sha (Join-Path $root $f.name)) -ne $f.after) { throw ('An installed file has changed: '+$f.name+'. Uninstall or restore it before reinstalling.') } }
+        $changed=$false
+        for($i=0;$i -lt $script:Names.Count;$i++) { if($old.files[$i].after -ne $m.files[$i].sha256) { $changed=$true } }
+        if($changed) { Invoke-PatchUpgrade $root $package $m $old;return }
         Write-Output 'Kira Kira Improvement Patch is already installed. Saves were not changed.';return
     }
     # Build every output in memory before creating backups or touching the game.
@@ -164,20 +229,13 @@ function Invoke-PatchInstallCore($GamePath,$PackageRoot) {
     foreach($f in $m.files) {
         $target=Join-Path $root $f.name;$exists=Test-Path -LiteralPath $target -PathType Leaf
         $before=if($exists) { Get-Sha $target } else { $null }
-        if($f.name -in @('data01000.arc','ipl._bp')) {
-            if($before -eq $f.sha256) { $bytes=[IO.File]::ReadAllBytes($target) }
-            elseif($before -eq $f.baseSha256) { Initialize-Delta;$bytes=[KiraPatchDelta]::Apply([IO.File]::ReadAllBytes($target),[IO.File]::ReadAllBytes((Join-Path $package $f.payload))) }
-            else { throw ('Unsupported or modified game file: '+$f.name+'. Use the English Standard Edition.') }
-        } else {
-            if($exists -and $before -ne $f.sha256) { throw ('A different file already uses this patch filename: '+$f.name) }
-            $bytes=[IO.File]::ReadAllBytes((Join-Path $package $f.payload))
-        }
+        $bytes=Get-PatchedBytes $root $package $f
         $outputs+=,[byte[]]$bytes
         $records+=@{name=$f.name;existed=[bool]$exists;before=$before;after=$f.sha256}
     }
     $id=[Guid]::NewGuid().ToString('N');$backup=Join-Path $root 'KiraKira_Improvement_Backup';$run=Join-Path $backup $id
     [void][IO.Directory]::CreateDirectory($run)
-    $receipt=@{owner=$script:Owner;version='1.0';game=$root;id=$id;state='prepared';files=$records}
+    $receipt=@{owner=$script:Owner;version=$m.version;game=$root;id=$id;state='prepared';files=$records}
     for($i=0;$i -lt $records.Count;$i++) {
         if($records[$i].existed) {
             [IO.File]::Copy((Join-Path $root $records[$i].name),(Join-Path $run ($i.ToString()+'.before')),$false)
@@ -200,10 +258,11 @@ function Invoke-PatchInstallCore($GamePath,$PackageRoot) {
         Restore-Receipt $root $receipt
         throw ('Installation failed and was rolled back. '+$problem.Exception.Message)
     }
-    Write-Output 'Installed successfully. Use "Launch Kira Kira.cmd" in the game folder. Existing saves were left unchanged.'
+    Write-Output 'Installed successfully. Launch BGI.exe normally. Existing saves were left unchanged.'
 }
 function Invoke-PatchUninstallCore($GamePath) {
     $root=Get-GameRoot $GamePath;Assert-Closed $root;$r=Read-Receipt $root
+    if($null -ne $r -and $r.state -eq 'upgrading') { Restore-Upgrade $root $r;$r=Read-Receipt $root }
     if($null -eq $r -or $r.state -eq 'restored') { Write-Output 'No active installation found. Nothing changed.';return }
     Restore-Receipt $root $r
     Write-Output 'Patch removed. Files from before installation were restored. Saves were left unchanged.'
