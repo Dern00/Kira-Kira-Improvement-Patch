@@ -19,9 +19,6 @@ INSTALL
 3. Select the game folder containing BGI.exe.
 4. After installation, use "Launch Kira Kira.cmd" in that folder.
 
-No Python installation or typed commands are needed. The launcher loads the
-font for the game without permanently installing it in Windows.
-
 SAVES
 
 Existing saves are left untouched. An original-version save successfully loaded
