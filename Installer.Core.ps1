@@ -3,7 +3,11 @@ $ErrorActionPreference='Stop'
 $script:Owner='KiraKiraImprovementPatch1'
 $script:Names=@('data01000.arc','ipl._bp','KiraMono.ttf','Launch Kira Kira.cmd','KiraKira_Improvement_Launcher.ps1')
 function Invoke-TestHook { param($Name) }
-function Get-Sha($Path) { return (Get-FileHash -LiteralPath $Path -Algorithm SHA256).Hash.ToLowerInvariant() }
+function Get-Sha($Path) {
+    $stream=[IO.File]::OpenRead($Path);$sha=[Security.Cryptography.SHA256]::Create()
+    try { return ([BitConverter]::ToString($sha.ComputeHash($stream))).Replace('-','').ToLowerInvariant() }
+    finally { $sha.Dispose();$stream.Dispose() }
+}
 function Assert-PlainPath($Path) {
     $cursor=[IO.Path]::GetFullPath($Path)
     while($cursor) {
