@@ -96,7 +96,7 @@ public static class KiraPatchDelta {
 }
 function Read-Package($Package) {
     $manifest=Get-Content -LiteralPath (Join-Path $Package 'manifest.json') -Raw -Encoding UTF8 | ConvertFrom-Json
-    if($manifest.owner -ne $script:Owner -or $manifest.version -ne '1.2') { throw 'Unsupported patch package.' }
+    if($manifest.owner -ne $script:Owner -or $manifest.version -ne '1.3') { throw 'Unsupported patch package.' }
     $names=@($manifest.files | ForEach-Object { $_.name })
     if($names.Count -ne $script:Names.Count -or @(Compare-Object $names $script:Names).Count -ne 0 -or @($names | Select-Object -Unique).Count -ne $names.Count) { throw 'Invalid patch file list.' }
     for($i=0;$i -lt $names.Count;$i++) { if($names[$i] -cne $script:Names[$i]) { throw 'Invalid patch file order.' } }
@@ -106,7 +106,8 @@ function Read-Package($Package) {
         $path=Join-Path $Package $f.payload;Assert-PlainPath $path
         if((Get-Sha $path) -ne $f.payloadSha256) { throw ('Patch files are damaged. Extract the ZIP again: '+$f.name) }
         if($f.PSObject.Properties['previousPayload']) {
-            if($f.name -cne 'ipl._bp' -or $f.previousPayload -cne 'payload/ipl._bp.v10.kkd' -or $f.previousSha256 -notmatch '^[a-f0-9]{64}$' -or $f.previousPayloadSha256 -notmatch '^[a-f0-9]{64}$') { throw 'Invalid upgrade manifest.' }
+            $priorPayload=if($f.name -ceq 'ipl._bp') { 'payload/ipl._bp.v10.kkd' } elseif($f.name -ceq 'data01000.arc') { 'payload/data01000.arc.v12.kkd' } else { $null }
+            if(-not $priorPayload -or $f.previousPayload -cne $priorPayload -or $f.previousSha256 -notmatch '^[a-f0-9]{64}$' -or $f.previousPayloadSha256 -notmatch '^[a-f0-9]{64}$') { throw 'Invalid upgrade manifest.' }
             $upgrade=Join-Path $Package $f.previousPayload;Assert-PlainPath $upgrade
             if((Get-Sha $upgrade) -ne $f.previousPayloadSha256) { throw 'Upgrade patch files are damaged. Extract the ZIP again.' }
         }

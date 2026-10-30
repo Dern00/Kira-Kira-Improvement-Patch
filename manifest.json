@@ -1,14 +1,17 @@
 {
   "owner": "KiraKiraImprovementPatch1",
-  "version": "1.2",
+  "version": "1.3",
   "engineSha256": "d84926c5a532a8d261f9d163f06316eeb8331a155caa282950b1f7b375bea1e0",
   "files": [
     {
       "name": "data01000.arc",
       "baseSha256": "56c0d637ea1b314728d48725c4e2d085fe9535a410ec027aa3050bd31b1798b9",
-      "sha256": "ca81174a34d8a49e660a3e9ee8617231919d4ab9d14f7234ba2f7dce2c81bdfa",
+      "sha256": "c68081b8c890dad83bd25fdddcdc60de7a582cc5e281b0c7d7fe4ef1bd88bea1",
+      "previousSha256": "ca81174a34d8a49e660a3e9ee8617231919d4ab9d14f7234ba2f7dce2c81bdfa",
+      "previousPayload": "payload/data01000.arc.v12.kkd",
+      "previousPayloadSha256": "c097ca29e9edf19bc39b5c4684a0095911e342be3a6ae532ed383141632dd825",
       "payload": "payload/data01000.arc.kkd",
-      "payloadSha256": "d0c02ed34ac05cc389eff3b26d0827cb82f64fe0537a3dbecbf96df693116741"
+      "payloadSha256": "0fe0b480d0bae1f69024407596328b742f84473ce2b1ac0d5c04db6f613bc644"
     },
     {
       "name": "ipl._bp",
@@ -16,17 +19,17 @@
       "sha256": "eb1d70e684a0c3e0404296f2f424b6d6018fecf168a797dad9ef5de4bf84d3be",
       "previousSha256": "2705e7e8d35c35e6ebce83779defd64bbcc07c3d3427d6e3aa3254867648ba83",
       "previousPayload": "payload/ipl._bp.v10.kkd",
-      "previousPayloadSha256": "b59ccefa92e902fb229a549b95c397670c849fc042353ab042308dec8b8e6caa",
+      "previousPayloadSha256": "95efb0a12656a2c684765f297dafb66c2663afd198bf111be30b4eb0a60affde",
       "archiveBase": {
         "name": "system.arc",
         "sha256": "1bf320de65c9327f5aae03605675e1e1e1e6c490b367424d27cb2f16f709cd97",
         "entry": "ipl._bp",
         "entrySha256": "dc2905fd77d74084f8505d6c6cee9c23ce3f51945d2100ee5c1192b864c24915",
         "payload": "payload/ipl._bp.archive.kkd",
-        "payloadSha256": "9974dd169b8b63fe8c913af1b449ea14eb2a5712f37ec215fb968c87683db70c"
+        "payloadSha256": "ed2c01c80ba2dde206ddf39c962f4ff51bad6370e8b1041f5c9d17dd2f7cd4fe"
       },
       "payload": "payload/ipl._bp.kkd",
-      "payloadSha256": "58a9015ad1c032f599ee9db683b8ac25cb9f60eb218915750d8adbb4f338d1d2"
+      "payloadSha256": "b1c726161955afd8097075b09891298cb8bb720582732d81f9338a3eb1a8f1cb"
     },
     {
       "name": "KiraMono.ttf",
