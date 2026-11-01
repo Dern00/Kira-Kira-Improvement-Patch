@@ -96,7 +96,7 @@ public static class KiraPatchDelta {
 }
 function Read-Package($Package) {
     $manifest=Get-Content -LiteralPath (Join-Path $Package 'manifest.json') -Raw -Encoding UTF8 | ConvertFrom-Json
-    if($manifest.owner -ne $script:Owner -or $manifest.version -ne '1.3') { throw 'Unsupported patch package.' }
+    if($manifest.owner -ne $script:Owner -or $manifest.version -ne '1.4') { throw 'Unsupported patch package.' }
     $names=@($manifest.files | ForEach-Object { $_.name })
     if($names.Count -ne $script:Names.Count -or @(Compare-Object $names $script:Names).Count -ne 0 -or @($names | Select-Object -Unique).Count -ne $names.Count) { throw 'Invalid patch file list.' }
     for($i=0;$i -lt $names.Count;$i++) { if($names[$i] -cne $script:Names[$i]) { throw 'Invalid patch file order.' } }
@@ -181,7 +181,7 @@ function Read-ArchiveBootstrap($Root,$Archive) {
     if($hash -ne $Archive.entrySha256) { throw 'The original game bootstrap failed verification.' }
     return ,$found
 }
-function Get-PatchedBytes($Root,$Package,$File) {
+function Get-PatchedBytes($Root,$Package,$File,$OriginalBackup) {
     $target=Join-Path $Root $File.name;$exists=Test-Path -LiteralPath $target -PathType Leaf
     $before=if($exists) { Get-Sha $target } else { $null }
     if($File.name -eq 'ipl._bp' -and -not $exists -and $File.PSObject.Properties['archiveBase']) {
@@ -194,6 +194,12 @@ function Get-PatchedBytes($Root,$Package,$File) {
         $delta=$null
         if($before -eq $File.baseSha256) { $delta=$File.payload }
         elseif($File.PSObject.Properties['previousSha256'] -and $before -eq $File.previousSha256) { $delta=$File.previousPayload }
+        if(-not $delta -and $OriginalBackup) {
+            Assert-PlainPath $OriginalBackup
+            if((Get-Sha $OriginalBackup) -ne $File.baseSha256) { throw ('Original upgrade backup verification failed: '+$File.name+'. Game unchanged.') }
+            Initialize-Delta
+            return ,([KiraPatchDelta]::Apply([IO.File]::ReadAllBytes($OriginalBackup),[IO.File]::ReadAllBytes((Join-Path $Package $File.payload))))
+        }
         if(-not $delta) { throw ('Unsupported or modified game file: '+$File.name+'. Use the English Standard Edition.') }
         Initialize-Delta
         return ,([KiraPatchDelta]::Apply([IO.File]::ReadAllBytes($target),[IO.File]::ReadAllBytes((Join-Path $Package $delta))))
@@ -217,7 +223,15 @@ function Restore-Upgrade($Root,$Receipt) {
 }
 function Invoke-PatchUpgrade($Root,$Package,$Manifest,$Receipt) {
     $outputs=@()
-    foreach($f in $Manifest.files) { $outputs+=,(Get-PatchedBytes $Root $Package $f) }
+    for($i=0;$i -lt $Manifest.files.Count;$i++) {
+        $f=$Manifest.files[$i];$original=$null
+        if($Receipt.files[$i].existed -and $f.name -in @('data01000.arc','ipl._bp')) {
+            $original=Join-Path $Root ('KiraKira_Improvement_Backup/'+$Receipt.id+'/'+$i+'.before')
+            Assert-PlainPath $original
+            if((Get-Sha $original) -ne $Receipt.files[$i].before) { throw ('Original upgrade backup verification failed: '+$f.name+'. Game unchanged.') }
+        }
+        $outputs+=,(Get-PatchedBytes $Root $Package $f $original)
+    }
     $backup=Join-Path $Root 'KiraKira_Improvement_Backup';$id=[Guid]::NewGuid().ToString('N');$run=Join-Path $backup $id
     [void][IO.Directory]::CreateDirectory($run)
     for($i=0;$i -lt $script:Names.Count;$i++) {
