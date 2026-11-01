@@ -6,12 +6,12 @@
     {
       "name": "data01000.arc",
       "baseSha256": "56c0d637ea1b314728d48725c4e2d085fe9535a410ec027aa3050bd31b1798b9",
-      "sha256": "a3afb134640cde2d21a21ddedc14c7807286c310eaf4e0b64e3aa44b4f790f3d",
+      "sha256": "5802de19ad995db18d029500e17c7dd6d1946d99cbd7444ef18a6fe94d6a74d8",
       "previousSha256": "ca81174a34d8a49e660a3e9ee8617231919d4ab9d14f7234ba2f7dce2c81bdfa",
       "previousPayload": "payload/data01000.arc.v12.kkd",
-      "previousPayloadSha256": "60d76e84b678dc0435c82b5d0a3a9fb9b81c0d69e439c5b8ea69b0801f256c3b",
+      "previousPayloadSha256": "7dce66c5bec82d6d2771ef06a3ae2624d905df929a4c082fcf88036a0c9d0c34",
       "payload": "payload/data01000.arc.kkd",
-      "payloadSha256": "761ae79748b9aec249ea2da77f4f034e5a1650fdb9c80f8ee0d8a52d1e6cd19e"
+      "payloadSha256": "3a82ac077340022fc0c7eedee147bf892f83847a04bf1a3595838c320a357e85"
     },
     {
       "name": "ipl._bp",
