@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="250" viewBox="0 0 1000 250" role="img" aria-labelledby="title desc">
+  <title id="title">Kira Kira Improvement Patch</title>
+  <desc id="desc">An English Standard Edition improvement patch.</desc>
+  <defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#182238"/><stop offset="1" stop-color="#0c1220"/></linearGradient></defs>
+  <rect width="1000" height="250" rx="16" fill="url(#bg)"/>
+  <g fill="none" stroke="#354158" stroke-width="2" opacity=".7">
+    <path d="M630 65H1000M630 95H1000M630 125H1000M630 155H1000M630 185H1000"/>
+    <circle cx="850" cy="125" r="85"/><circle cx="850" cy="125" r="65"/>
+  </g>
+  <g fill="#ffd36a"><path d="m850 55 12 50 49 20-49 18-12 52-13-52-48-18 48-20Z"/><path d="m935 40 4 16 16 6-16 6-4 16-4-16-16-6 16-6Z"/><circle cx="740" cy="188" r="4"/></g>
+  <rect x="48" y="42" width="4" height="166" rx="2" fill="#ffd36a"/>
+  <g font-family="Arial,Helvetica,sans-serif">
+    <text x="75" y="72" fill="#b9c6db" font-size="15" letter-spacing="3">ENGLISH STANDARD EDITION</text>
+    <text x="72" y="143" fill="#ffffff" font-size="64" font-weight="700" letter-spacing="2">KIRA KIRA</text>
+    <text x="76" y="188" fill="#ffd36a" font-size="27" letter-spacing="4">IMPROVEMENT PATCH</text>
+  </g>
+</svg>
