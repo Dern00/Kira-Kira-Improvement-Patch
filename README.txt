@@ -4,12 +4,59 @@ Version 1.4
 An improvement patch for the English Standard Edition of Kira Kira.
 Requires the English game. Not for Curtain Call or the Japanese edition.
 
+PROJECT GOAL
+
+The goal is a clearer, more accurate English script that preserves Kira Kira's
+story, character voices, humor, and personality. The patch improves the existing
+translation, corrects lost or mistaken meaning, and keeps natural English
+phrasing and established localizations. A clearer bold font also makes the game
+easier to read.
+
 WHAT CHANGES
 
 - Corrects mistranslations, missing meaning, grammar, punctuation, and awkward
   English, checked against the original Japanese script.
 - Keeps natural dialogue, character voices, jokes, and established localizations.
 - Replaces the hard-to-read game font with a clearer bold font.
+
+BEFORE AND AFTER
+
+These examples show the original English release alongside the patched text.
+
+1. Correcting a character description
+
+   Original: Kirari is sensual.
+   Patched:  Kirari is the intuitive type.
+
+   The scene is about writing lyrics. The Japanese describes Kirari's
+   intuitive creative approach, not sensuality.
+
+2. Repairing broken narration
+
+   Original:
+   The silence is making the air in the feel heavy. I have to say something.
+
+   Patched:
+   The silence hangs heavy. I need to say something, anything.
+
+3. Making a garbled description understandable
+
+   Original:
+   So what this situation makes is a man in girls in the dressing room.
+
+   Patched:
+   The result is that I am the one man in a dressing room full of women.
+
+4. Restoring clear, natural dialogue
+
+   Original:
+   "Sure. I want to wipe off the image of our club. I want to appeal our
+   existence before we're gone. Actually that's Kirari, our leader, thinks."
+
+   Patched:
+   "Sure. We can finally erase the Second Literature Club's image as plain
+   and practically invisible, and make sure people remember we existed.
+   Besides, it is what Kirari, our leader, wants."
 
 INSTALL
 
