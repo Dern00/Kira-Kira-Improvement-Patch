@@ -32,11 +32,11 @@ These examples compare the original English release with the text in the patch.
 
 ### A character description with the wrong meaning
 
-| Original | Patched |
-| --- | --- |
-| Kirari is sensual. | Kirari is the intuitive type. |
+| Japanese | Original English | Patched |
+| --- | --- | --- |
+| きらりは感覚派。 | Kirari is sensual. | Kirari is the intuitive type. |
 
-The scene is about writing lyrics. The Japanese describes Kirari's intuitive creative approach, not sensuality.
+The scene is about writing lyrics. Here, 感覚派 describes someone who works by intuition or feel: Kirari's creative approach.
 
 ### Broken narration
 
